@@ -12,7 +12,7 @@ It is possible to translate client side messages too (those stored in JavaScript
 
 It also allows you to translate text on the client side (on the live webpage) without having to log in to the translating interface. (frontendTranslation).
 
-On the server side it can handle database or one-dimensional/multidimensional array elements and Yii::t functions. 
+On the server side it can handle database or one-dimensional/multidimensional array elements and Yii::t functions.
 You can exclude files, folders or categories to prevent them from being translated.
 
 Installation
@@ -95,7 +95,7 @@ A more complex example including database table with multilingual support is bel
         'layout' => 'language',         // Name of the used layout. If using own layout use 'null'.
         'allowedIPs' => ['127.0.0.1'],  // IP addresses from which the translation interface is accessible.
         'roles' => ['@'],               // For setting access levels to the translating interface.
-        'tmpDir' => '@runtime',         // Writable directory for the client-side temporary language files. 
+        'tmpDir' => '@runtime',         // Writable directory for the client-side temporary language files.
                                         // IMPORTANT: must be identical for all applications (the AssetsManager serves the JavaScript files containing language elements from this directory).
         'phpTranslators' => ['::t'],    // list of the php function for translating messages.
         'jsTranslators' => ['lajax.t'], // list of the js function for translating messages.
@@ -148,7 +148,7 @@ Front end translation:
 
 ```php
 'bootstrap' => ['translatemanager'],
-'component' => [
+'components' => [
     'translatemanager' => [
         'class' => 'lajax\translatemanager\Component'
     ]
@@ -231,6 +231,8 @@ Lx::t('category', 'Hello {name}!', ['name' => 'World']);
 Lx::t('category', "Don't be so upset.");
 ```
 
+**IMPORTANT: The lajax\translatemanager\helpers\Language::t() (Lx::t()) function currently does not support the translation of HTMLattributes**
+
 PHP arrays:
 
 ```php
@@ -267,6 +269,8 @@ public function getGenders() {
 
 PHP Database:
 
+* With new attributes:
+
 ```php
 namespace common\models;
 
@@ -281,25 +285,6 @@ use lajax\translatemanager\helpers\Language;
  */
 class Category extends \yii\db\ActiveRecord {
 
-    // TranslateBehavior
-
-    public function behaviors()
-    {
-        return [
-            [
-                'class' => lajax\translatemanager\behaviors\TranslateBehavior::className(),
-                'translateAttributes' => ['name', 'description'],
-            ],
-
-            // or If the category is the database table name.
-            // [
-            //     'class' => lajax\translatemanager\behaviors\TranslateBehavior::className(),
-            //     'translateAttributes' => ['name', 'description'],
-            //     'category' => static::tableName(),
-            // ],
-        ];
-    }
-
     // afterFind & beforeSave:
 
     /**
@@ -312,7 +297,7 @@ class Category extends \yii\db\ActiveRecord {
      */
     public $description_t;
 
-    ...
+    /* ... */
 
     public function afterFind() {
         $this->name_t = Language::d($this->name);
@@ -320,7 +305,7 @@ class Category extends \yii\db\ActiveRecord {
 
         // or If the category is the database table name.
         // $this->name_t = Language::t(static::tableName(), $this->name);
-        // $this->description_t = Language::t(static::tableName(), $this->descrioption);
+        // $this->description_t = Language::t(static::tableName(), $this->description);
         parent::afterFind();
     }
 
@@ -363,6 +348,45 @@ class Category extends \yii\db\ActiveRecord {
 }
 ```
 
+
+* With behavior (since 1.5.3):
+
+    **Note:** This will replace the model's original attribute values!
+
+```php
+namespace common\models;
+
+/**
+ * This is the model class for table "category".
+ *
+ * @property string $category_id
+ * @property string $name
+ * @property string $description
+ */
+class Category extends \yii\db\ActiveRecord {
+
+    // TranslateBehavior
+
+    public function behaviors()
+    {
+        return [
+            [
+                'class' => \lajax\translatemanager\behaviors\TranslateBehavior::className(),
+                'translateAttributes' => ['name', 'description'],
+            ],
+
+            // or If the category is the database table name.
+            // [
+            //     'class' => \lajax\translatemanager\behaviors\TranslateBehavior::className(),
+            //     'translateAttributes' => ['name', 'description'],
+            //     'category' => static::tableName(),
+            // ],
+        ];
+    }
+
+}
+```
+
 ###URLs
 
 URLs for the translating tool:
@@ -374,7 +398,7 @@ URLs for the translating tool:
 /translatemanager/language/optimizer    // Optimise the database
 ```
 
-Example implementation of the Yii2 menu into your own menu. 
+Example implementation of the Yii2 menu into your own menu.
 
 ```php
 $menuItems = [
@@ -393,7 +417,7 @@ $menuItems = [
 ```
 
 ###Console commands
- 
+
 Register the command
 
 ```php
