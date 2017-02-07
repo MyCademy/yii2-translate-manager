@@ -5,6 +5,7 @@ namespace lajax\translatemanager\services\scanners;
 use Yii;
 use yii\helpers\Console;
 use yii\helpers\FileHelper;
+use yii\base\InvalidConfigException;
 use lajax\translatemanager\services\Scanner;
 
 /**
@@ -94,16 +95,33 @@ abstract class ScannerFile extends \yii\console\controllers\MessageController {
     /**
      * @inheritdoc Initialise the $files static array.
      */
-    public function init() {
-
-        if (empty(self::$files[static::EXTENSION]) && in_array(static::EXTENSION, $this->module->patterns)) {
-            self::$files[static::EXTENSION] = FileHelper::findFiles(realpath($this->_getRoot()), [
-                        'except' => $this->module->ignoredItems,
-                        'only' => [static::EXTENSION],
-            ]);
-        }
+    public function init()
+    {
+        $this->initFiles();
 
         parent::init();
+    }
+
+    protected function initFiles()
+    {
+        if (!empty(self::$files[static::EXTENSION]) || !in_array(static::EXTENSION, $this->module->patterns)) {
+            return;
+        }
+
+        self::$files[static::EXTENSION] = [];
+
+        foreach ($this->_getRoots() as $root) {
+            $root = realpath($root);
+            Yii::trace("Scanning " . static::EXTENSION . " files for language elements in: $root", 'translatemanager');
+
+            $files = FileHelper::findFiles($root, [
+                'except' => $this->module->ignoredItems,
+                'only' => [static::EXTENSION],
+            ]);
+            self::$files[static::EXTENSION] = array_merge(self::$files[static::EXTENSION], $files);
+        }
+
+        self::$files[static::EXTENSION] = array_unique(self::$files[static::EXTENSION]);
     }
 
     
@@ -237,11 +255,29 @@ abstract class ScannerFile extends \yii\console\controllers\MessageController {
     abstract protected function getLanguageItem($buffer);
     
     /**
-     * Returns the root directory of the project scan.
-     * @return string
+     * Returns the root directories to scan.
+     * @return array
      */
-    private function _getRoot() {
-        return dirname(Yii::getAlias($this->module->root));
+    private function _getRoots()
+    {
+        $directories = [];
+
+        if (is_string($this->module->root)) {
+            $root = Yii::getAlias($this->module->root);
+            if ($this->module->scanRootParentDirectory) {
+                $root = dirname($root);
+            }
+
+            $directories[] = $root;
+        } elseif (is_array($this->module->root)) {
+            foreach ($this->module->root as $root) {
+                $directories[] = Yii::getAlias($root);
+            }
+        } else {
+            throw new InvalidConfigException("Invalid `root` option value!");
+        }
+
+        return $directories;
     }
 
     /**

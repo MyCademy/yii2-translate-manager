@@ -142,9 +142,32 @@ class Module extends \yii\base\Module {
     ];
 
     /**
-     * @var string the root directory of the scanning.
+     * @var string|array The root directory or directories of the scanning. The path can be an alias or
+     * a full path.
+     *
+     * It is possible to define one root directory as string. In this case the `scanRootParentDirectory` will be used
+     * when determining the actual directory to scan.
+     *
+     * Multiple root directories can be declared in an array. In this case all items must point to the exact directory,
+     * as `scanRootParentDirectory` **will be omitted**.
      */
     public $root = '@app';
+    
+    /**
+     * @var bool Whether scan the defined `root` parent directory, or the folder itself. This option is used only,
+     * when the `root` option contains a single directory as string (e.g. `'root' => '@app'`).
+     * 
+     * <b>IMPORTANT</b>: Changing this from `true` to `false` could cause loss of translated items, as
+     * optimize action removes the missing items.
+     * 
+     * If the configured root is `@app`:
+     *  - `true` means for advanced apps, that the scan runs on the parent directory, which is the root for the entire project.
+     *     This is the desired behavior.
+     *  - `true` means for basic apps, that the scan runs also on the parent directory, which is outside of the project folder
+     *     (as `@app` is equals to the project root). This is not desired behavior, it is preferred to change this option
+     *     to `false`.
+     */
+    public $scanRootParentDirectory = true;
 
     /**
      * @var string writeable directory used for keeping the generated javascript files.
@@ -250,6 +273,21 @@ class Module extends \yii\base\Module {
     public $defaultExportFormat = Response::FORMAT_JSON;
 
     /**
+     * @var string The default db connection
+     */
+    public $connection = 'db';
+
+    /**
+     * @var array Scanners can be overriden here. If not set original set of scanners will be used from Scanner
+     */
+    public $scanners = [];
+
+    /**
+     * @var string google API Key for using with google translate service (v2). Default is false - google translate will not be available.
+     */
+    public $googleApiKey = false;
+
+    /**
      * @inheritdoc
      */
     public function beforeAction($action) {
@@ -280,6 +318,7 @@ class Module extends \yii\base\Module {
      */
     public function getLanguageItemsDirPath() {
         return Yii::getAlias($this->tmpDir) . $this->subDir;
-    }
-
+    } 
+    
+    
 }

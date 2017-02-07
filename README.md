@@ -92,6 +92,8 @@ A more complex example including database table with multilingual support is bel
     'translatemanager' => [
         'class' => 'lajax\translatemanager\Module',
         'root' => '@app',               // The root directory of the project scan.
+        'scanRootParentDirectory' => true, // Whether scan the defined `root` parent directory, or the folder itself.
+                                           // IMPORTANT: for detailed instructions read the chapter about root configuration.
         'layout' => 'language',         // Name of the used layout. If using own layout use 'null'.
         'allowedIPs' => ['127.0.0.1'],  // IP addresses from which the translation interface is accessible.
         'roles' => ['@'],               // For setting access levels to the translating interface.
@@ -113,16 +115,76 @@ A more complex example including database table with multilingual support is bel
                 'columns' => ['name', 'name_ascii'],// names of multilingual fields
                 'category' => 'database-table-name',// the category is the database table name
             ]
-        ]
+        ],
+        'scanners' => [ // define this if you need to override default scanners (below)
+            '\lajax\translatemanager\services\scanners\ScannerPhpFunction',
+            '\lajax\translatemanager\services\scanners\ScannerPhpArray',
+            '\lajax\translatemanager\services\scanners\ScannerJavaScriptFunction',
+            '\lajax\translatemanager\services\scanners\ScannerDatabase',
+        ],
+        'googleApiKey' => 'your_google_API_Key', // if set - google translation will be inserted into translation field when you click on the source field.  
     ],
 ],
 ```
 
-IMPORTANT: If you want to modify the value of roles (in other words to start using user roles) you need to enable authManager in the common config.
+#### Configuring the scan root
 
-Using of [authManager](http://www.yiiframework.com/doc-2.0/guide-security-authorization.html).
+The root path can be an alias or a full path (e.g. `@app` or `/webroot/site/`).
 
-examples:
+The file scanner will scan the configured folders for translatable elements. The following two options
+determine the scan root directory: `root`, and `scanRootParentDirectory`. These options are defaults to
+values that works with the Yii 2 advanced project template. If you are using basic template, you have to modify
+these settings.
+
+The `root` options tells which is the root folder for project scan. It can contain a single directory (string),
+or multiple directories (in an array).
+
+The `scanRootParentDirectory` **is used only** if a single root directory is specified in a string.
+
+**IMPORTANT: Changing these options could cause loss of translated items,
+as optimize action removes the missing items.** So be sure to double check your configuration!
+
+**a)** Single root directory:
+
+It is possible to define one root directory as string in the `root` option. In this case the `scanRootParentDirectory`
+will be used when determining the actual directory to scan.
+
+If `scanRootParentDirectory` is set to `true` (which is the default value), the scan will run on the parent directory.
+This is desired behavior on advanced template, because the `@app` is the root for the current app, which is a subfolder
+inside the project (so the entire root of the project is the parent directory of `@app`).
+
+For basic template the `@app` is also the root for the entire project. Because of this with the default value
+of `scanRootParentDirectory`, the scan runs outside the project folder. This is not desired behavior, and
+changing the value to `false` solves this.
+
+**IMPORTANT: Changing the `scanRootParentDirectory` from `true` to `false` could cause loss of translated items,
+as the root will be a different directory.**
+
+For example:
+
+| `root` value | `scanRootParentDirectory` value| Scanned directory |
+|---|---|---|
+| `/webroot/site/frontend` | `true` | `/webroot/site` |
+| `/webroot/site/frontend` | `false` | `/webroot/site/frontend` |
+
+**b)** Multiple root directories:
+
+Multiple root directories can be defined in an array. In this case all items must point to the exact directory,
+as `scanRootParentDirectory` **will be omitted**.
+
+For example:
+
+```php
+'root' => [
+    '@frontend',
+    '@vendor',
+    '/some/external/folder',
+],
+```
+
+#### Using of [authManager](http://www.yiiframework.com/doc-2.0/guide-security-authorization.html)
+
+Examples:
 
 PhpManager:
 ```php
@@ -144,7 +206,7 @@ DbManager:
 ],
 ```
 
-Front end translation:
+#### Front end translation:
 
 ```php
 'bootstrap' => ['translatemanager'],
@@ -432,6 +494,37 @@ Use it with the Yii CLI
 ./yii translate/scan
 ./yii translate/optimize
 ```
+
+###Using google translate api
+
+Google translate api is a paid service. At the moment of writing the price is $20 USD per 1 million characters trsanslated.
+
+In order to activate the feature you need to have Google account, generate google Api Key, and enable this feature
+by adding 'googleApiKey' to 'translatemanager' module configuration: 
+
+```php
+
+'modules' => [
+
+    'translatemanager' => [
+    
+        // ...
+        
+        'googleApiKey' => `Your_Google_API_Key',
+     ],
+],
+```
+Once feature is enabled it will insert google translation of the source into the empty translation field 
+(instead of original text) when you click on source field.
+
+
+Known issues
+-----------
+
+* Scanner is scanning parent root directory [#12](https://github.com/lajax/yii2-translate-manager/pull/12).
+
+  You can overwrite this behavior with the `scanRootParentDirectory` option. (See Config section for details.)
+* Frontend translation of strings in hidden tags corrupts HTML. [#45](https://github.com/lajax/yii2-translate-manager/issues/45)
 
 Screenshots
 -----------
