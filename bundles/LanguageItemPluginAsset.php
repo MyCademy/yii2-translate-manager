@@ -20,13 +20,6 @@ class LanguageItemPluginAsset extends AssetBundle {
     /**
      * @inheritdoc
      */
-    public $publishOptions = [
-        'forceCopy' => true
-    ];
-
-    /**
-     * @inheritdoc
-     */
     public function init() {
 
         $this->sourcePath = \Yii::$app->getModule('translatemanager')->getLanguageItemsDirPath();
