@@ -2,6 +2,7 @@
 
 namespace lajax\translatemanager\bundles;
 
+use yii\helpers\ArrayHelper;
 use yii\web\AssetBundle;
 
 /**
@@ -23,7 +24,20 @@ class LanguageItemPluginAsset extends AssetBundle {
     public function init() {
 
         $this->sourcePath = \Yii::$app->getModule('translatemanager')->getLanguageItemsDirPath();
-        if (file_exists(\Yii::getAlias($this->sourcePath . \Yii::$app->language . '.js'))) {
+        $sourceTranslationFile = \Yii::getAlias($this->sourcePath . \Yii::$app->language . '.js');
+
+        if (file_exists($sourceTranslationFile)) {
+
+            $publishPath = \Yii::$app->assetManager->getPublishedPath($this->sourcePath);
+            $publishedTranslationFile = $publishPath . DIRECTORY_SEPARATOR . \Yii::$app->language . '.js';
+
+            if ($publishPath === false ||
+                !file_exists($publishedTranslationFile) ||
+                (filemtime($sourceTranslationFile) > filemtime($publishedTranslationFile))
+            ){
+                $this->publishOptions = ArrayHelper::merge($this->publishOptions, ['forceCopy' => true]);
+            }
+
             $this->js = [
                 \Yii::$app->language . '.js'
             ];
