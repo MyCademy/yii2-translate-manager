@@ -41,6 +41,7 @@ class ImportForm extends Model
                     'application/xml',
                     'application/json',
                     'text/plain', //json is sometimes incorrectly marked as text/plain
+                    'text/csv',
                 ],
                 'enableClientValidation' => false,
             ],
@@ -195,15 +196,13 @@ class ImportForm extends Model
      */
     protected function parseImportFile()
     {
-        $importFileContent = file_get_contents($this->importFile->tempName);
-
         if ($this->importFile->extension == Response::FORMAT_JSON) {
 
-            $data = Json::decode($importFileContent);
+            $data = Json::decode(file_get_contents($this->importFile->tempName));
 
         }else if($this->importFile->extension == Response::FORMAT_XML) {
 
-            $xml = simplexml_load_string($importFileContent);
+            $xml = simplexml_load_string(file_get_contents($this->importFile->tempName));
             $json = json_encode($xml);
             $data = json_decode($json, true);
 
@@ -212,8 +211,43 @@ class ImportForm extends Model
                 $data[$key] = current($value);
             }
 
+        } elseif($this->importFile->extension == 'csv') {
+
+            $data = [
+                'languages' => [], // Languages are not supported when using csv
+                'languageSources' => [],
+                'languageTranslations' => [],
+            ];
+
+            $file = new \SplFileObject($this->importFile->tempName);
+            $file->setFlags(\SplFileObject::READ_CSV);
+
+            $columns = $file->current();
+            $file->next();
+
+            while (!$file->eof()) {
+                $line = $file->current();
+                $line = array_combine($columns, $line);
+
+                $source = array_intersect_key($line, array_flip(['id', 'category', 'message']));
+                unset($line['id'], $line['category'], $line['message']);
+                $translations = $line;
+
+                $data['languageSources'][] = $source;
+
+                foreach ($translations as $language => $translation) {
+                    $data['languageTranslations'][] = [
+                        'id' => $source['id'],
+                        'language' => $language,
+                        'translation' => $translation,
+                    ];
+                }
+
+                $file->next();
+            }
+
         }else{//should be caught by the form validation, but just in case
-            throw new BadRequestHttpException('Only json and xml files are supported.');
+            throw new BadRequestHttpException('Only json,xml and csv files are supported.');
         }
 
         return $data;
